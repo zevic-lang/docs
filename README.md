@@ -1,31 +1,31 @@
-# Zevic ドキュメント
+# Zevic documentation
 
-[Zevic](https://github.com/zevic-lang/zevic)は、Cの資産をそのまま使える、小さくて書きやすいネイティブ言語です。ソースをLLVM IRに変換し、`clang`で機械語にします。
+[Zevic](https://github.com/zevic-lang/zevic) is a small, easy-to-write native language that can use C code as it is. It turns source code into LLVM IR and lets `clang` produce the machine code.
 
-| 文書 | 内容 |
+| Document | Content |
 | --- | --- |
-| [言語仕様](spec/zevic-spec.md) | 字句、型、式と文、クラスとインターフェース、エラー処理、CとC++との連携、標準ライブラリ、ツール、文法 |
-| [標準ライブラリ](stdlib.md) | `Zevic.*`のモジュールの一覧と、使い方を示すサンプル |
-| [実装計画](plan.md) | 段階ごとの計画と進み具合 |
-| [提案(RFC)](proposals/) | 言語や標準ライブラリの変更の提案と、その結論 |
-| [設計メモ](design/) | LLVM IRの設計メモと実験 |
+| [Language specification](spec/zevic-spec.md) | lexical structure, types, expressions and statements, classes and interfaces, error handling, C and C++ interop, the standard library, tools, the grammar |
+| [Standard library](stdlib.md) | the list of `Zevic.*` modules, with samples that show how to use them |
+| [Implementation plan](plan.md) | the plan by stage, and how far it has come |
+| [Proposals (RFCs)](proposals/) | proposals for changes to the language and the standard library, and their outcomes |
+| [Design notes](design/) | notes and experiments on the LLVM IR |
 
-## 関連リポジトリ
+## Related repositories
 
-| リポジトリ | 内容 |
+| Repository | Content |
 | --- | --- |
-| [zevic](https://github.com/zevic-lang/zevic) | コンパイラ(Zevicで書かれたセルフホスト版)、標準ライブラリ、`zevpm`、`zevfmt` |
-| [zevic-c](https://github.com/zevic-lang/zevic-c) | 最初のコンパイラ`zevic0`(C言語で実装)。セルフホストの種として残してある |
-| [examples](https://github.com/zevic-lang/examples) | 動くサンプル96個。CIで全部を実行して出力を確かめている |
-| docs | このリポジトリ |
+| [zevic](https://github.com/zevic-lang/zevic) | the compiler (the self-hosted one, written in Zevic), the standard library, `zevpm` and `zevfmt` |
+| [zevic-c](https://github.com/zevic-lang/zevic-c) | the first compiler, `zevic0` (written in C). Kept as the seed of self-hosting. |
+| [examples](https://github.com/zevic-lang/examples) | 96 working samples. CI runs all of them and checks the output. |
+| docs | this repository |
 
-## 始める
+## Getting started
 
 ```
 git clone https://github.com/zevic-lang/zevic
 cd zevic
-make                     # clangだけでビルドできる
+make                     # clang alone is enough to build it
 build/zevic examples/01_hello.zev -o hello && ./hello
 ```
 
-仕様書の内容は、[zevic](https://github.com/zevic-lang/zevic)の`docs/`と同じものです。変更は提案(`proposals/`)から始め、採用されたら仕様書に反映します。
+The specification is the same as `docs/` of [zevic](https://github.com/zevic-lang/zevic). A change starts as a proposal (`proposals/`), and once accepted it is reflected in the specification.

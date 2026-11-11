@@ -1,38 +1,38 @@
-# 標準ライブラリ
+# Standard library
 
-標準ライブラリは`Zevic.*`のモジュールで、コンパイラと同じリポジトリの`packages/Zevic/src/`にあります。`import Zevic.Text`のように読み込み、`Text.Split(...)`のようにモジュール名で呼びます。`Zevic.Core`(`Array` `Map` `Option` `Result`など)は、何も書かなくても使えます。
-使い方は、[examples](https://github.com/zevic-lang/examples)の番号のフォルダにある、動くサンプルを見てください。
+The standard library is the `Zevic.*` modules, in `packages/Zevic/src/` of the same repository as the compiler. Load a module with `import Zevic.Text` and call it by the module name, as in `Text.Split(...)`. `Zevic.Core` (`Array`, `Map`, `Option`, `Result`, `StringBuilder` and so on) can be used without writing anything.
+For how to use the modules, see the working samples in the numbered folders of [examples](https://github.com/zevic-lang/examples).
 
-| モジュール | 内容 | サンプル |
+| Module | Content | Samples |
 | --- | --- | --- |
-| `Core` | `Array` `Map` `Set` `Option` `Result` `Iterable` `StringBuilder`など。importは不要 | 07, 19, 46, 47, 48 |
-| `Console` | 標準入出力、`Printf` | 01, 18 |
-| `Text` | 文字列の検索、分割、置換、整形、`Format` | 20, 21 |
-| `Chars` | 文字の判定と変換 | 21 |
-| `Math` | `F64`の数学関数 | 49 |
-| `Random` | 種を指定できる乱数(SplitMix64) | 39 |
-| `Time` / `DateTime` | 時刻の計測、日付と時刻の計算・整形・解析 | 27, 40 |
-| `Env` / `Process` | 引数と環境変数、他のプログラムの実行 | 42, 41 |
-| `Path` / `Fs` | パスの操作、ファイルとディレクトリ | 22, 23 |
-| `Bytes` / `Encoding` / `Digest` | バイト列、16進・Base64・パーセント符号化、CRC-32・SHA-256・HMAC | 24, 25, 26 |
-| `Deflate` / `Zlib` / `Gzip` / `Zip` / `Tar` | 圧縮とアーカイブ | 43, 44, 45 |
-| `Json` / `Toml` / `Csv` | データ形式の読み書き | 33, 32, 31 |
-| `Regex` | 正規表現 | 30 |
-| `Net` / `Http` | TCP・UDP、HTTP/1.1のクライアントとサーバー | 34, 35, 36 |
-| `Async` | タスク、チャネル、ミューテックス | 37, 38 |
-| `Log` | レベルとフィールドのあるログ | 28 |
-| `Cli` | コマンドライン引数の解析、ヘルプの生成 | 29 |
-| `Test` | `test`ブロックの検査 | 10 |
+| `Core` | `Array`, `Map`, `Set`, `Option`, `Result`, `Iterable`, `StringBuilder` and more. No import needed. | 07, 19, 46, 47, 48 |
+| `Console` | standard input and output, `Printf` | 01, 18 |
+| `Text` | searching, splitting, replacing and formatting strings, `Format` | 20, 21 |
+| `Chars` | classifying and converting characters | 21 |
+| `Math` | math functions on `F64` | 49 |
+| `Random` | random numbers with a settable seed (SplitMix64) | 39 |
+| `Time` / `DateTime` | measuring time; calculating, formatting and parsing dates and times | 27, 40 |
+| `Env` / `Process` | arguments and environment variables; running other programs | 42, 41 |
+| `Path` / `Fs` | path operations; files and directories | 22, 23 |
+| `Bytes` / `Encoding` / `Digest` | byte strings; hex, Base64 and percent encoding; CRC-32, SHA-256 and HMAC | 24, 25, 26 |
+| `Deflate` / `Zlib` / `Gzip` / `Zip` / `Tar` | compression and archives | 43, 44, 45 |
+| `Json` / `Toml` / `Csv` | reading and writing data formats | 33, 32, 31 |
+| `Regex` | regular expressions | 30 |
+| `Net` / `Http` | TCP and UDP; an HTTP/1.1 client and server | 34, 35, 36 |
+| `Async` | tasks, channels and mutexes | 37, 38 |
+| `Log` | logging with levels and fields | 28 |
+| `Cli` | parsing command-line arguments and generating help | 29 |
+| `Test` | checks in `test` blocks | 10 |
 
-## 他の言語との連携
+## Working with other languages
 
-| やりたいこと | サンプル |
+| What you want to do | Sample |
 | --- | --- |
-| Cの関数を呼ぶ、Cから呼ばれる | 09 |
-| Cの構造体を渡す(`extern struct`) | 90 |
-| コールバックと`Handle` | 91 |
-| 文字列の受け渡し | 92 |
-| Zevicのライブラリを、Cから使う(`--lib --emit-header`) | 93 |
-| C++の標準ライブラリを使う | 94 |
-| Rustを呼ぶ | 95 |
-| Zevicのライブラリを、Goから使う | 96 |
+| Call C functions, be called from C | 09 |
+| Pass C structs (`extern struct`) | 90 |
+| Callbacks and `Handle` | 91 |
+| Passing strings | 92 |
+| Use a Zevic library from C (`--lib --emit-header`) | 93 |
+| Use the C++ standard library | 94 |
+| Call Rust | 95 |
+| Use a Zevic library from Go | 96 |
