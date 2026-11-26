@@ -6,7 +6,7 @@ For how to use the modules, see the working samples in the numbered folders of [
 | Module | Content | Samples |
 | --- | --- | --- |
 | `Core` | `Array`, `Map`, `Set`, `Option`, `Result`, `Iterable`, `StringBuilder` and more. No import needed. | 07, 19, 46, 47, 48 |
-| `Console` | standard input and output, `Printf` | 01, 18 |
+| `Console` | standard input and output, `Printf` (`%d` and also `%{Type}`, which checks the type) | 01, 18 |
 | `Text` | searching, splitting, replacing and formatting strings, `Format` | 20, 21 |
 | `Chars` | classifying and converting characters | 21 |
 | `Math` | math functions on `F64` | 49 |
@@ -19,7 +19,9 @@ For how to use the modules, see the working samples in the numbered folders of [
 | `Json` / `Toml` / `Csv` | reading and writing data formats | 33, 32, 31 |
 | `Regex` | regular expressions | 30 |
 | `Net` / `Http` | TCP and UDP; an HTTP/1.1 client and server | 34, 35, 36 |
-| `Async` | tasks, channels and mutexes | 37, 38 |
+| `Async` / `Thread` | tasks, channels and mutexes; OS threads (`Spawn` and `Join`) | 37, 38 |
+| `BigInt` | integers of any size | |
+| `Unsafe` | raw memory in `unsafe` blocks: `Alloc`, `Free`, `Cast` and the methods of `*T`. See [the guide](https://zevic-lang.github.io/unsafe/) | |
 | `Log` | logging with levels and fields | 28 |
 | `Cli` | parsing command-line arguments and generating help | 29 |
 | `Test` | checks in `test` blocks | 10 |
