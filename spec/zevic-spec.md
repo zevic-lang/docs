@@ -17,7 +17,7 @@ Zevic is a small, easy-to-write native language that can use C code as it is. Th
 
 ### Non-goals
 
-- Low-level control for writing an OS or a kernel (`unsafe`, manual memory and a `NoGC` mode have been moved to future considerations)
+- A full low-level mode for writing an OS or a kernel (`unsafe` blocks with manual memory exist, see "Manual memory"; a `NoGC` mode has been moved to future considerations)
 - Inheritance (only `interface`s and composition are used)
 - Macros (variadic arguments are covered by `params`; if needed, to be considered after self-hosting)
 - Function overloading, default arguments and named arguments
@@ -116,7 +116,9 @@ They have a meaning only in their position, and can be used as identifiers elsew
 
 ### Words reserved for the future
 
-They cannot be used now: `macro`, `unsafe`, `type`, `where`, `const`, `yield`, `impl` and `null`.
+They cannot be used now: `macro`, `type`, `where`, `const`, `yield`, `impl`, `union`, `volatile`, `pub`, `try` and `null`.
+
+They are kept for what may come: `union` (C unions), `volatile` (reads and writes that must not be optimized away, with `unsafe`), `pub` (finer control of visibility), `try` (a form next to `?`). More words can be added before 1.0 and not after. To use one as a name today, enclose it in backquotes.
 
 ### Reserved names
 
@@ -226,7 +228,7 @@ The types of Zevic are the fixed-width numeric types, `Bool`, `Char`, `String` a
 
 - If integer arithmetic goes out of range, it is a `Panic` (no wrapping). Integer division by zero is also a `Panic`.
 - An integer literal without a written type takes the type of the context. Without context it is `I64`, and a decimal is `F64`.
-- An arbitrary-precision integer (`Integer`) does not exist now.
+- Arbitrary-precision integers are not a language type. They are provided by the standard library as the `BigInt` type of `Zevic.BigInt` (see "Standard library, second and third batches").
 
 ### Composite types
 
@@ -599,7 +601,7 @@ let task: Async.Task<Result<Unit, Error>> = async {
 server.Close()                                                        // ends Serve
 ```
 
-- Only `http://`. `https://` is an `Err` (TLS is not supported). Redirects are not followed. Each connection is closed after one request.
+- Only `http://`. `https://` is an `Err` (TLS is not supported; the package [`zevic-lang/curl`](https://github.com/zevic-lang/curl) is the HTTPS client). Redirects are not followed. Each connection is closed after one request.
 - The body is handled with `Content-Length`, `chunked`, or until the connection closes. The limit is 16 MiB and the timeout is 30 seconds.
 - `Serve` creates one `async` task per connection. See `docs/proposals/0003-http.md` for details.
 
@@ -707,9 +709,9 @@ Your own types are defined with `struct` (a value type), `class` (a reference ty
 
 ```
 class Person {
-    name: String                  // lower case = private (inside the module)
-    Age: I32                      // upper case = public
-    Tags: Array<String> = []      // an initial value of a field
+    let name: String              // lower case = private (inside the module)
+    mut Age: I32                  // upper case = public
+    mut Tags: Array<String> = []  // an initial value of a field
 
     fn Init(name: String, age: I32) {
         this.name = name
@@ -734,7 +736,12 @@ p.Birthday()
 
 **Rules**
 
-- A field is written `name: Type`, and an initial value can be given with `= expression`. A capital first letter is public, a small one is private (visible only inside the same module).
+- A field is written `let name: Type` or `mut name: Type`, and an initial value can be given with `= expression`. A capital first letter is public, a small one is private (visible only inside the same module).
+  - **`mut`** fields can be changed (from a `mut` variable, or inside a `mut fn`), as before.
+  - **`let`** fields can be set only inside `Init` (through `this`) and cannot be changed after that, not even by a `mut` variable. A `let` field also cannot be changed in place (`items.Push(x)` on a `let` field is an error), the same as a `let` variable.
+  - A `static` field is a constant: `static let Name: Type = value` (`static mut` is an error).
+  - Only `class` and `struct` have fields written like this. The fields of an `extern struct` stay `Name: Type`.
+  - The old form without `let` or `mut` (`name: Type`) is an error (before 2026-11-24 it was the only way to write a field). Write `mut name: Type`, which means the same.
 - Methods are `fn`. **`this` cannot be omitted** (`this.name`).
 - **`mut fn`** can change the fields of `this`. It can be called only from a `mut` variable. Inside an ordinary `fn`, the content of `this` cannot be changed (deep immutability).
 - **`static fn`** and **`static` fields** are called with the type name, as in `Person.Anonymous()`. A `static` field is a constant and cannot be assigned (mutable global state cannot be held).
@@ -743,8 +750,8 @@ p.Birthday()
 
 ```
 class Labeled {
-    Inner: Circle
-    Label: String
+    mut Inner: Circle
+    mut Label: String
 
     fn Init(inner: Circle, label: String) {
         this.Inner = inner
@@ -812,7 +819,7 @@ interface Shape {
 }
 
 class Circle : Shape {
-    r: F64
+    mut r: F64
     fn Init(r: F64) { this.r = r }
     fn Area() -> F64 { 3.14 * this.r * this.r }
 }
@@ -860,7 +867,7 @@ interface Iterable<T> {
 
 ```
 class Stack<T> {
-    items: Array<T> = []
+    mut items: Array<T> = []
     mut fn Push(x: T) { this.items.Push(x) }
     mut fn Pop() -> Option<T> { this.items.Pop() }
 }
@@ -990,9 +997,9 @@ fn ReadPort(path: String) -> Result<U16, Error> {
 
 ```
 class Error {
-    Kind: ErrorKind
-    Message: String
-    Cause: Option<Error>
+    mut Kind: ErrorKind
+    mut Message: String
+    mut Cause: Option<Error>
 }
 
 enum ErrorKind { NotFound, Invalid, Permission, Io, Parse, Timeout, Other }
@@ -1074,13 +1081,60 @@ defer f.Close()
 
 ### Threads and the GC
 
-- Threads (`Zevic.Async`) use the thread-aware build of the Boehm GC. Threads are created through a wrapper of the runtime.
+- Threads (`Zevic.Thread` and `Zevic.Async`) use the thread-aware build of the Boehm GC. Threads are created through a wrapper of the runtime.
 - The state of the runtime (error numbers, the working values for starting processes, the target of the test `longjmp`) is kept per thread.
 
 ### Settings
 
 - Tuning of the GC (the upper limit of the heap, the frequency of collection) is done with environment variables (`ZEVIC_GC_...`). It cannot be touched from source code.
-- A `NoGC` mode and `unsafe` are not in the specification for now (see "Open questions and future considerations").
+- `unsafe` blocks give manual memory next to the GC (next section). A `NoGC` mode is not in the specification for now (see "Open questions and future considerations").
+
+### Manual memory (`unsafe`)
+
+`unsafe { ... }` is a block (it has a value, like any block). Only inside it can memory be managed by hand. `unsafe` is a keyword; a lambda written inside an `unsafe` block is **not** unsafe itself.
+
+```
+import Zevic.Unsafe
+
+unsafe {
+    let p: *I64 = Unsafe.Alloc<I64>(4)   // room for 4 values, zero-filled
+    p.Write(0, 10)
+    p.Offset(1).Write(0, 20)
+    let a: I64 = p.Read(0)
+    Unsafe.Free(p)
+}
+```
+
+| Name | Meaning |
+| --- | --- |
+| `Unsafe.Alloc<T>(n: I64) -> *T` | memory for `n` values of `T`, filled with zeros; a null pointer when there is no memory |
+| `Unsafe.Free(p: *T)` | gives it back; only for what `Alloc` returned (`Free` of a null pointer does nothing) |
+| `Unsafe.Cast<U>(p) -> *U` | the same address as another type |
+| `p.Read(i) -> T`, `p.Write(i, v)` | the `i`-th value (counted in values, not bytes) |
+| `p.Offset(n) -> *T` | the pointer `n` values further |
+| `p.IsNull() -> Bool` | the only operation of these that is allowed outside `unsafe` |
+
+- The pointer is the same `*T` as in the C interop. `Read`, `Write` and `Offset` work on a pointer that came from C too.
+- **No range check, no check of use after `Free`, no check of a second `Free`.** These are the programmer's.
+- `T` must be something the GC has nothing to do with: a number, `Bool`, `Char`, a pointer, or a struct, tuple or enum made only of those. A `String`, a class, an `Array`, a function and so on are a compile error (the GC does not scan this memory, so such a reference would be lost). The same check applies to `Read` and `Write`.
+- `T` cannot be `Unit` or `CVoid` (no size); use `Unsafe.Cast` to get a pointer to a sized type.
+- Calling `extern "C"` functions does not need `unsafe` (as before).
+- Using any of these outside `unsafe` is a compile error.
+
+#### `unsafe fn`
+
+A function can be declared `unsafe`: its whole body counts as `unsafe`, and it can only be called from an `unsafe { ... }` block or from another `unsafe fn`.
+
+```
+unsafe fn Total(p: *I64, n: I64) -> I64 { ... }
+
+let t: I64 = unsafe { Total(p, 3) }
+```
+
+- It works on top-level functions and on methods (`unsafe fn`, `static unsafe fn`, `mut unsafe fn`; the keywords can come in any order before `fn`).
+- Calling it anywhere else is a compile error, also inside a lambda written in an `unsafe` block (a lambda is not unsafe).
+- An `unsafe fn` cannot be used as a value (`let f = Danger`), because the call would then be unchecked.
+- A method of an `interface` cannot be `unsafe`, and a method that is `unsafe` does not satisfy an interface method: a value of the interface could be called outside `unsafe`.
 
 ### The boundary with C
 
@@ -1260,7 +1314,7 @@ zevic hello.zev native/hello.c -o hello
 
 - Files listed on the command line are handled according to their **extension** (the table below).
 - In a package, the files under `native/` are added to the build automatically.
-- In `[native]` of `zevic.toml`, write the libraries to link and the search paths.
+- In `[native]` of `zevic.toml`, write the libraries to link and the search paths. `zevpm` turns them into `-l`, `-L`, `-I` and `-D` for `zevic`; `lib_dirs` and `include_dirs` are relative to the package that names them (a dependency's too), and the `[native]` of the dependencies is used as well.
 
 ```
 [native]
@@ -1442,6 +1496,7 @@ Prompt(msg: String) -> Option<String>   // show the message, then ReadLine
 - If the format string of `Printf` is a literal, the types and the number are **checked at compile time**. If it is a variable, it is checked at run time, and a mismatch is a Panic.
 - `%d` accepts any width of integer (decided from the type).
 - `Text.Format(fmt, ...) -> String` uses the same format as `Printf` (`%d %u %o %x %X %f %e %g %s %c %%`; flags, width and precision as in C) and returns a `String` without printing. The format must be a literal, and the types and the number are checked at compile time.
+- `%{Type}` also works in `Printf`, `Eprintf` and `Text.Format`, next to `%d` and the others, in the same format. `Type` is one of `I8 I16 I32 I64 U8 U16 U32 U64 F32 F64 String Char Bool`. Flags, width and precision go before the brace (`%05{I32}`, `%.2{F64}`, `%-10{String}`). Unlike `%d`, the argument must be **exactly** that type (an `I32` is an error for `%{I64}`), and a literal takes that type. `%{Bool}` prints `true` or `false`. An unknown type or a missing `}` is a compile error.
 - String interpolation `"${x}"` calls `x.ToString()`.
 
 ### C
@@ -1480,9 +1535,10 @@ After the first batch works, the second and third batches are implemented in tha
 
 | Module | Role |
 | --- | --- |
-| `Zevic.Net` | TCP and UDP, an HTTP client |
-| `Zevic.Thread` | threads, mutexes and channels |
-| `Zevic.Async` | asynchronous processing |
+| `Zevic.Net` | TCP and UDP sockets (HTTP is `Zevic.Http`) |
+| `Zevic.Thread` | OS threads (the base of `Async`) |
+| `Zevic.Async` | tasks, channels and mutexes, built on `Thread` |
+| `Zevic.BigInt` | arbitrary-precision integers (the `BigInt` type) |
 | `Zevic.Json` | reading and writing JSON |
 | `Zevic.Random` | random numbers |
 | `Zevic.Path` `Zevic.Bytes` `Zevic.Chars` | path operations, byte strings (`Array<U8>`), classification and conversion of characters (`Char`) (v0.4.1) |
@@ -1490,9 +1546,39 @@ After the first batch works, the second and third batches are implemented in tha
 | `Zevic.DateTime` `Zevic.Log` `Zevic.Cli` | dates and times (fixed offsets), logging, parsing command-line arguments (v0.4.1) |
 | `Zevic.Regex` `Zevic.Csv` `Zevic.Toml` | regular expressions (a Pike VM), CSV (RFC 4180), TOML 1.0 (v0.4.1) |
 | `Zevic.Deflate` `Zevic.Zlib` `Zevic.Gzip` `Zevic.Zip` `Zevic.Tar` | compression and decompression, reading and writing zip and tar archives (with zip-slip protection) (v0.4.1) |
-| `Zevic.Test` | assertions for tests (see the chapter on tests). The real implementation is in implementation stage 6, ahead of the second batch. |
+| `Zevic.Test` | assertions for tests (see the chapter on tests). Implemented in stage 6. |
 
-- The model of concurrency (`Thread` / `Async`) is undecided. It will be decided after looking at how it works with the GC (the thread support of Boehm).
+- **Concurrency** uses OS threads ([proposal 0002](../proposals/0002-async.md)). `Thread` holds the threads themselves, and `Async` builds tasks, channels and mutexes on top of them.
+- **`BigInt`** is not a language type. Operators are not overloaded for it, so arithmetic is written with methods. The type is `BigInt.BigInt` (module `Zevic.BigInt`, the same form as `Random.Rng`). It implements `Equatable` (`==`) and `Comparable` (`Compare`). On a struct or class that implements `Comparable`, `<`, `<=`, `>` and `>=` call its `Compare` method and compare the result with 0.
+- All the modules in this table are implemented. The function names below are the implemented ones. If they change later, this block is updated too.
+
+```
+// Zevic.Thread (OS threads; implemented)
+Thread.Spawn(f: fn() -> Unit) -> Thread.Thread    // Thread.Thread is the class of a thread
+t.Join()                                          // waits for the end; t is declared with mut. Joining twice is a Panic
+Thread.Yield()
+
+// Zevic.Net (TCP and UDP; implemented, see the chapter on the standard library)
+Net.Connect(host: String, port: I64) -> Result<TcpStream, Error>
+Net.Listen(host: String, port: I64) -> Result<TcpListener, Error>
+l.Accept() -> Result<TcpStream, Error>
+s.ReadString(max: I64) / s.ReadBytes(max: I64) -> Result<..., Error>   // 0 bytes means the peer has closed
+s.WriteString(s: String) / s.WriteBytes(b: Array<U8>) -> Result<Unit, Error>
+Net.BindUdp(host: String, port: I64) -> Result<UdpSocket, Error>
+u.SendString(host: String, port: I64, data: String) -> Result<Unit, Error>
+u.Receive(max: I64) -> Result<Packet, Error>       // Packet has Text(), Bytes(), FromHost() and FromPort()
+
+// Zevic.BigInt (arbitrary-precision signed integers; values are immutable)
+BigInt.FromI64(x: I64) -> BigInt.BigInt
+BigInt.Parse(s: String) -> Result<BigInt.BigInt, Error>  // decimal; an optional + or - comes first
+b.ToString() -> String
+b.ToI64() -> Result<I64, Error>                   // Err when out of range
+a.Add(b) / a.Sub(b) / a.Mul(b) -> BigInt.BigInt
+a.Neg() / a.Abs() / a.IsZero()
+a.DivRem(b) -> (BigInt.BigInt, BigInt.BigInt)    // quotient truncated toward 0; the remainder has the sign of a; division by 0 is a Panic
+a.Pow(e: I64) -> BigInt.BigInt                    // e < 0 is a Panic
+a == b   a.Compare(b) -> I32                      // via Equatable and Comparable
+```
 
 ### Naming rules
 
@@ -1524,6 +1610,8 @@ zevic --version
 | `-l<name>` `-L<dir>` `-I<dir>` `-D<k=v>` | options for linking and C |
 | `--cc <path>` `--cxx <path>` | specify the external compilers |
 | `--test` | build an executable for tests |
+| `--target <name>` | build for another system (see "Cross-compilation") |
+| `--sysroot <dir>` | the headers and libraries of that system (also `ZEVIC_SYSROOT`) |
 
 ### The flow of compilation
 
@@ -1549,6 +1637,28 @@ zevic --version
   4. the usual install locations (`C:\Program Files\LLVM\bin` on Windows, Homebrew on macOS, `/usr/lib/llvm-*/bin`)
 - When it is not found or the version is old, it prints how to install it (`winget install LLVM.LLVM`, `apt install clang`, `brew install llvm`) and exits.
 - On Windows the MSVC libraries are needed, so the Visual Studio Build Tools are assumed to be installed.
+- **`zig cc`** is accepted in place of clang: when the compiler given with `--cc` or `ZEVIC_CLANG` is a program named `zig`, it is run as `zig cc`, and the LLVM triples that `zevic` passes become zig targets. It is not searched for on `PATH`; see the next section.
+
+### Cross-compilation
+
+`--target <name>` builds for another system. `<name>` is one of the names below, `host` (the machine the compiler runs on, the default), or a full LLVM triple.
+
+| Name | Triple | Executable |
+| --- | --- | --- |
+| `linux-x64` | `x86_64-unknown-linux-gnu` | `app` |
+| `linux-arm64` | `aarch64-unknown-linux-gnu` | `app` |
+| `macos-x64` | `x86_64-apple-darwin` | `app` |
+| `macos-arm64` | `arm64-apple-darwin` | `app` |
+| `windows-x64` | `x86_64-pc-windows-msvc` | `app.exe` |
+| `windows-arm64` | `aarch64-pc-windows-msvc` | `app.exe` |
+
+- The target decides the size of `CLong` (4 on Windows, 8 elsewhere), the suffix of the executable (`.exe`), and the system libraries that are linked (`-lws2_32` on Windows). The runtime objects are cached per target. Linking uses lld.
+- The LLVM IR carries no `target triple` line; clang is given `--target=<triple>`.
+- `zevic` does not ship the C headers and libraries of the target. They come from, in this order: `--sysroot` or `ZEVIC_SYSROOT`; the compiler named by `--cc` or `ZEVIC_CLANG` (**Zig** carries them for Linux, Windows and macOS); the Zig that `install.sh --with-zig`, `install.ps1 -WithZig` or the Windows setup put in `<home>/zig/`, which is used when `--target` is given and no compiler is named; the cross packages of the system (on Debian, `gcc-aarch64-linux-gnu`, with `clang --gcc-install-dir=/usr/lib/gcc-cross/aarch64-linux-gnu/<version>` in a wrapper given as `ZEVIC_CLANG`).
+- With Zig, Windows targets use the MinGW ABI (`x86_64-windows-gnu`), not MSVC. Zevic code is not affected; a C library built for MSVC cannot be linked. A package with C++ files cannot be built with Zig.
+- `--target` cannot be combined with `--test`, since the program cannot run here.
+- Building for macOS needs the macOS SDK or Zig; the SDK is not shipped.
+- In `zevpm`, `zevpm build --target <name>` writes to `build/<name>/`; `run` and `test` refuse `--target`. A `[native]` library is searched for in the sysroot of the target.
 
 ### The runtime
 
@@ -1626,7 +1736,7 @@ myapp/
 name = "MyApp"
 version = "0.1.0"
 kind = "bin"            # "bin" or "lib"
-zevic = ">=0.1"
+zevic = ">=0.5"
 
 [deps]
 JsonPlus = { git = "https://github.com/someone/jsonplus", tag = "v1.2.0" }
@@ -1850,16 +1960,14 @@ To grow the language over a long time, it is run as a GitHub organization. The n
 
 | Item | Status |
 | --- | --- |
-| Concurrency | The model of `Thread` and `Async`. To be decided after looking at how it works with the Boehm GC. |
 | Generic constraints | To be added in implementation stage 5. The policy is not to provide `where`. |
-| `Integer` (arbitrary precision) | Whether to add it, and how to write literals |
 | A `Main` that returns a `Result` | Not allowed for now. To be reconsidered when needed. |
 | Reading and writing through pointers | The syntax `*p`. For now pointers are only passed. |
 | Formats in string interpolation | Whether to add format specifiers such as `"${x:5.2}"` |
 
 ### Future considerations (not included now)
 
-- A `NoGC` mode and `unsafe` (low-level control for OS development)
+- A `NoGC` mode (and, with it, a way to write a kernel; `unsafe` blocks exist, see "Manual memory")
 - `union`s and bit fields in `extern struct`
 - Macros as a language feature (function arguments are of fixed length, and variable length is only `params` and `Printf`)
 - Inheritance (the policy is not to add it; see whether composition and `interface` are enough while using the language)
@@ -1887,7 +1995,7 @@ tparams     = '<' tparam { ',' tparam } '>' ; tparam = Ident [ ':' type { '+' ty
 
 classDecl   = 'class' Ident [ tparams ] [ ':' typelist ] '{' { field | fnDecl } '}'
 structDecl  = 'struct' Ident [ tparams ] [ ':' typelist ] '{' { field | fnDecl } '}'
-field       = [ 'static' ] Ident ':' type [ '=' expr ]
+field       = ( 'let' | 'mut' | 'static' 'let' ) Ident ':' type [ '=' expr ]
 enumDecl    = 'enum' Ident [ tparams ] [ ':' typelist ] '{' variant { ',' variant } [ ',' ] { fnDecl } '}'
 variant     = Ident [ '(' typelist ')' | '{' field { ',' field } '}' ]
 variantLit  = path '{' Ident ':' expr { ',' Ident ':' expr } [ ',' ] '}'      (the value of a named variant; path ends in an upper-case name, as in Shape.Named)
@@ -1943,8 +2051,8 @@ enum Command {
 }
 
 struct Entry {
-    Word: String
-    Count: I64
+    mut Word: String
+    mut Count: I64
 
     fn Init(word: String, count: I64) {
         this.Word = word
@@ -1953,7 +2061,7 @@ struct Entry {
 }
 
 class Counter {
-    counts: Map<String, I64> = Map.New()
+    mut counts: Map<String, I64> = Map.New()
 
     mut fn Add(word: String) {
         let n: I64 = this.counts.Get(word).UnwrapOr(0)
@@ -2030,6 +2138,6 @@ test "Parse rejects an unknown command" {
 }
 ```
 
-- This sample is the same as `examples/apps/wordcount/src/Main.zev` and runs as it is with the compiler implementation (`tests/examples_test.py` checks that they match).
+- This sample is the same as `examples/apps/wordcount/src/Main.zev` and runs as it is with the compiler implementation (`tests/zevtest.c`, mode `examples`, checks that they match).
 - The `Zevic` of the standard library can be omitted (`Console.Println` and `Zevic.Console.Println` are the same).
 - The first goal of implementation stage 1 is not this program but "Hello World" (`module Main` / `Console.Println`).
