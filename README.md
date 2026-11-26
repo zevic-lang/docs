@@ -28,4 +28,4 @@ make                     # clang alone is enough to build it
 build/zevic examples/01_hello.zev -o hello && ./hello
 ```
 
-The specification is the same as `docs/` of [zevic](https://github.com/zevic-lang/zevic). A change starts as a proposal (`proposals/`), and once accepted it is reflected in the specification.
+The specification, the plan, the proposals and the design notes are a copy of `docs/` of [zevic](https://github.com/zevic-lang/zevic): the `sync` workflow of this repository copies them every 3 hours (edit them in zevic, not here; only `README.md` and `stdlib.md` are written here). A change starts as a proposal (`proposals/`), and once accepted it is reflected in the specification.
