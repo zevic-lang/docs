@@ -1142,7 +1142,7 @@ zevic --freestanding --target riscv64-unknown-elf -T linker.ld --entry _start ke
 - It is an error to use anything that needs the runtime: `String`, `Array`, `Map`, closures, `class` objects, interfaces, threads, tasks and the standard library modules that depend on them. `struct`, numbers, `Bool`, `Char`, tuples, enums, pointers, `unsafe`, `Zevic.Unsafe` and `extern "C"` work. The error names the function and what it needs.
 - **A panic handler is required** when the code can panic (division by zero, overflow, an array or range check, `unwrap`): define `export "C" fn zevic_panic(msg: *U8, len: CLongLong, file: *U8, line: CInt)`. It must not return.
 - RISC-V 64 targets get `-mcmodel=medany` (kernels live at high addresses), and code is compiled with `noredzone` and without stack protector, as kernel code must.
-- A package says the same in `zevic.toml`: `kind = "freestanding"` and a `[freestanding]` section (`target`, `linker_script`, `entry`, `cflags`, `ldflags`). `zevpm build` makes `build/<Name>.elf`; the `.s` and `.S` files in `native/` are assembled with it. `zevpm run` and `zevpm test` refuse such a package.
+- A package says the same in `zevic.toml`: a `[freestanding]` section (its presence makes the package freestanding; `kind` stays `"bin"`; a freestanding library is not supported yet) with the keys `target`, `linker_script`, `entry`, `cflags`, `ldflags`). `zevpm build` makes `build/<Name>.elf`; the `.s` and `.S` files in `native/` are assembled with it. `zevpm run` and `zevpm test` refuse such a package.
 
 ### `zevic bind`: a module from a C header
 
@@ -1156,6 +1156,23 @@ clang reads the header, and `zevic bind` writes a Zevic module: an `extern "C"` 
 - `--strip-prefix` (can be given many times, the case does not matter) takes a prefix off the names. A name that would be a name of the prelude (`SQLITE_OK` is `Ok`) keeps its prefix (`SqliteOk`).
 - What cannot be bound is listed in a comment at the end of the file: variadic functions, functions that pass or return a struct by value (the compiler passes structs by pointer only), unions, bit fields, `long double`.
 - `-I`, `-D`: passed to clang. The module is plain text: edit it, or run `zevic bind` again.
+
+### `import C`: the header is the declaration
+
+```
+import C "sqlite3.h" as Sqlite3 strip "sqlite3_", "SQLITE_"
+
+fn Main() {
+    let v: CString = Sqlite3.Libversion()
+}
+```
+
+`import C "header.h" as Name` does at compile time what `zevic bind` writes to a file: clang reads the header and the module `C.Name` is made from it, used as `Name`. No file is written and no C is needed. `strip` lists prefixes to take off the names, as `--strip-prefix` does. The rules of the mapping (types, constants, what is not bound) are those of `zevic bind`.
+
+- The header is looked for next to the file that imports it, then relative to the current directory, then as `<header.h>` in the include directories (`-I`, `[native] include_dirs`) and the system's. `-D` flags of the build are given to clang.
+- clang must be installed when a program says `import C`; programs that do not are not affected.
+- The library still has to be linked: `-lsqlite3`, or `[native] libs`.
+- `import C` and `extern` work together: use `extern` for the single function or for what the header does not give.
 
 ### The boundary with C
 
@@ -1188,7 +1205,7 @@ fn Main() {
 
 - Declare C functions with `fn` in an `extern "C" { ... }` block. No body is written.
 - A declaration can be used inside that module. A name that starts with a capital letter is public like any other Zevic name, so `fn Sum(v: *CInt, n: CULong) -> CInt = "pt_sum"` can be called as `Lib.Sum(...)` from another module; write the alias form when you want that. A name written as the C name (lowercase) stays inside the module.
-- `Null` can be passed where a callback (`fn(...)`) is expected, for the C functions that allow `NULL` there. It becomes a null function pointer.
+- `Null` can be passed where a callback (`fn(...)`) is expected, for the C functions that allow `NULL` there. It becomes a null function pointer. For the callbacks that C code defines by a number (`SQLITE_TRANSIENT` is `-1`, `SIG_IGN` is `1`), `Unsafe.CallbackAt<fn(...) -> ...>(-1)` gives that value; it must be a constant, and it can only be passed to C (`unsafe`).
 - The name is the C name as it is (no mangling). To change the C name, give an alias in the form `fn Foo() -> CInt = "c_name"`.
 - Calls are the same as for ordinary functions. But the parameters and the return value are **C types only**.
 
