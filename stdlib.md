@@ -18,7 +18,7 @@ For how to use the modules, see the working samples in the numbered folders of [
 | `Deflate` / `Zlib` / `Gzip` / `Zip` / `Tar` | compression and archives | 43, 44, 45 |
 | `Json` / `Toml` / `Csv` | reading and writing data formats | 33, 32, 31 |
 | `Regex` | regular expressions | 30 |
-| `Net` / `Http` | TCP and UDP; an HTTP/1.1 client and server | 34, 35, 36 |
+| `Net` | TCP and UDP. HTTP is not here since 0.6.0: use the packages [`zevic-lang/curl`](https://github.com/zevic-lang/curl) (client) and [`zevic-lang/httpd`](https://github.com/zevic-lang/httpd) (server) | 34 |
 | `Async` / `Thread` | tasks, channels and mutexes; OS threads (`Spawn` and `Join`) | 37, 38 |
 | `BigInt` | integers of any size | |
 | `Unsafe` | raw memory in `unsafe` blocks: `Alloc`, `Free`, `Cast` and the methods of `*T`. See [the guide](https://zevic-lang.github.io/unsafe/) | |
